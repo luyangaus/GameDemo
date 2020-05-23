@@ -3,11 +3,15 @@ class DrawingApp {
   private context: CanvasRenderingContext2D;
   private bird: Bird;
   private timer: number;
+  private pipes: Array<Pipe>;
 
   constructor() {
     this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
     this.context = this.canvas.getContext("2d");
-    this.bird = new Bird();
+    this.gameStart();
+  }
+
+  private addListeners() {
     this.canvas.addEventListener("mousedown", (e) => {
       this.bird.flap(true);
       this.bird.fly();
@@ -16,29 +20,57 @@ class DrawingApp {
     this.canvas.addEventListener("mouseup", (e) => {
       this.bird.flap(false);
     });
-    this.draw();
   }
 
-  private draw() {
+  private gameStart() {
+    this.bird = new Bird();
+    this.createPipes();
+    this.addListeners();
     let down = this.bird.getImage();
     down.image.onload = () => {
       if (!this.timer) {
-        this.timer = setInterval(this.drop, 10);
+        this.timer = setInterval(this.drawImg, 10);
       }
     };
   }
 
-  drop = () => {
-    this.bird.drop();
+  drawImg = () => {
     this.context.clearRect(0, 0, 800, 400);
+    this.drawBird();
+    this.drawPipes();
+  };
+
+  private drawBird() {
+    this.bird.drop();
     this.context.drawImage(
       this.bird.getImage().image,
       this.bird.getXPosition(),
       this.bird.getYPosition(),
-      this.bird.getImage().height,
-      this.bird.getImage().width
+      this.bird.getImage().width,
+      this.bird.getImage().height
     );
-  };
+  }
+
+  private drawPipes() {
+    this.pipes.map((pipe) => {
+      this.context.drawImage(
+        pipe.getImage().image,
+        pipe.getXPosition(),
+        pipe.getYPosition(),
+        pipe.getImage().width,
+        pipe.getImage().height
+      );
+      pipe.move();
+    });
+  }
+
+  private createPipes() {
+    this.pipes = new Array<Pipe>();
+    setInterval(() => {
+      this.pipes.push(new Pipe());
+      if (this.pipes.length > 10) this.pipes = this.pipes.slice(3);
+    }, 1800);
+  }
 }
 
 class IMG {
@@ -55,13 +87,34 @@ class IMG {
   }
 }
 
-class Bird {
-  private img: IMG;
-  private xPosition: number;
-  private yPosition: number;
+interface MyImageInterface {
+  getImage();
+  getXPosition();
+  getYPosition();
+}
+
+class ImageObj implements MyImageInterface {
+  protected img: IMG;
+  protected xPosition: number;
+  protected yPosition: number;
+
+  public getImage() {
+    return this.img;
+  }
+  public getXPosition() {
+    return this.xPosition;
+  }
+
+  public getYPosition() {
+    return this.yPosition;
+  }
+}
+
+class Bird extends ImageObj {
   private imgPath = ["./img/up.png", "./img/down.png"];
 
   constructor() {
+    super();
     this.xPosition = 200;
     this.yPosition = 100;
     this.loadImages();
@@ -79,20 +132,29 @@ class Bird {
     if (this.yPosition > 50) this.yPosition -= 50;
   }
 
-  public getImage() {
-    return this.img;
-  }
-
   public flap(mouseDown: boolean) {
     mouseDown ? (this.img.image.src = this.imgPath[0]) : (this.img.image.src = this.imgPath[1]);
   }
+}
 
-  public getXPosition() {
-    return this.xPosition;
+class Pipe extends ImageObj {
+  private imgPath = ["./img/pipe.png"];
+  private id: number;
+
+  constructor() {
+    super();
+    this.xPosition = 800;
+    this.yPosition = -460 + Math.round(Math.random() * 140); //-460, -320
+    this.id = new Date().getTime();
+    this.loadImage();
   }
 
-  public getYPosition() {
-    return this.yPosition;
+  private loadImage() {
+    this.img = new IMG(450, 1100, this.imgPath[0]);
+  }
+
+  public move() {
+    this.xPosition--;
   }
 }
 
