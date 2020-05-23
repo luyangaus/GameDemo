@@ -3,7 +3,7 @@
     "target": "es5",
     "sourceMap": true,
     "lib": ["es5", "dom"],
-    "noUnusedLocals": true,
+    "noUnusedLocals": false,
     "module": "commonjs"
   }
 }
