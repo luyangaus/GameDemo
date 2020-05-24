@@ -36,9 +36,29 @@ class DrawingApp {
 
   drawImg = () => {
     this.context.clearRect(0, 0, 800, 400);
+    this.drawBackground();
     this.drawBird();
     this.drawPipes();
+    let pipe = this.pipes.filter((pipe) => {
+      return !pipe.isCalculate;
+    })[0];
+    this.checkStatus(pipe);
   };
+
+  private checkStatus(pipe: Pipe) {
+    if (pipe) {
+      if (this.bird.getXPosition() + 60 == pipe.getXPosition()) {
+        console.log("in");
+        pipe.isCalculate = true;
+      }
+    }
+  }
+
+  private drawBackground() {
+    let backgroundImg = new Image();
+    backgroundImg.src = "./img/background.png";
+    this.context.drawImage(backgroundImg, 0, 0, 800, 400);
+  }
 
   private drawBird() {
     this.bird.drop();
@@ -67,9 +87,11 @@ class DrawingApp {
   private createPipes() {
     this.pipes = new Array<Pipe>();
     setInterval(() => {
-      this.pipes.push(new Pipe());
-      if (this.pipes.length > 10) this.pipes = this.pipes.slice(3);
-    }, 1800);
+      let fixYPosition = Math.round(Math.random() * 150);
+      this.pipes.push(new Pipe(true, fixYPosition));
+      this.pipes.push(new Pipe(false, fixYPosition));
+      if (this.pipes.length > 15) this.pipes = this.pipes.slice(3);
+    }, 2000);
   }
 }
 
@@ -129,7 +151,7 @@ class Bird extends ImageObj {
   }
 
   public fly() {
-    if (this.yPosition > 50) this.yPosition -= 50;
+    this.yPosition > 50 ? (this.yPosition -= 50) : (this.yPosition = 0);
   }
 
   public flap(mouseDown: boolean) {
@@ -138,19 +160,20 @@ class Bird extends ImageObj {
 }
 
 class Pipe extends ImageObj {
-  private imgPath = ["./img/pipe.png"];
-  private id: number;
+  private imgPath = ["./img/up_pipe.png", "./img/down_pipe.png"];
+  public isCalculate = false;
+  private pipeWidth = 70;
+  private pipeHeight = 300;
 
-  constructor() {
+  constructor(isUp: boolean, fixYPosition: number) {
     super();
     this.xPosition = 800;
-    this.yPosition = -460 + Math.round(Math.random() * 140); //-460, -320
-    this.id = new Date().getTime();
-    this.loadImage();
+    this.yPosition = fixYPosition + (isUp ? 180 : -230); //330 - 180 (up)  -80 ~ -230
+    this.loadImage(isUp);
   }
 
-  private loadImage() {
-    this.img = new IMG(450, 1100, this.imgPath[0]);
+  private loadImage(isUp: boolean) {
+    this.img = isUp ? new IMG(this.pipeWidth, this.pipeHeight, this.imgPath[0]) : new IMG(this.pipeWidth, this.pipeHeight, this.imgPath[1]);
   }
 
   public move() {
