@@ -19,13 +19,15 @@ var DrawingApp = /** @class */ (function () {
             _this.drawBackground();
             _this.drawBird();
             _this.drawPipes();
+            _this.scoreBoard.innerHTML = "Score: " + _this.bird.getScore();
             var pipe = _this.pipes.filter(function (pipe) {
-                return !pipe.isCalculate;
+                return !pipe.isCalculate && pipe.isDown();
             })[0];
             _this.checkStatus(pipe);
         };
         this.canvas = document.getElementById("canvas");
         this.context = this.canvas.getContext("2d");
+        this.scoreBoard = document.getElementById("mark");
         this.gameStart();
     }
     DrawingApp.prototype.addListeners = function () {
@@ -52,9 +54,19 @@ var DrawingApp = /** @class */ (function () {
     };
     DrawingApp.prototype.checkStatus = function (pipe) {
         if (pipe) {
-            if (this.bird.getXPosition() + 60 == pipe.getXPosition()) {
-                console.log("in");
+            if (this.bird.getXPosition() + this.bird.width >= pipe.getXPosition() &&
+                this.bird.getXPosition() <= pipe.getXPosition() + pipe.pipeWidth &&
+                (this.bird.getYPosition() < pipe.getYPosition() + pipe.pipeHeight ||
+                    this.bird.getYPosition() + this.bird.height > pipe.getYPosition() + pipe.pipeHeight + pipe.getGap())) {
+                console.log("pass");
+                clearInterval(this.timer);
+                clearInterval(this.pipeTimer);
+                console.log("pipe :" + (pipe.getYPosition() + pipe.pipeHeight));
+                console.log("bird :" + this.bird.getYPosition());
+            }
+            if (this.bird.getXPosition() > pipe.getXPosition() + pipe.pipeWidth) {
                 pipe.isCalculate = true;
+                this.bird.passPipe();
             }
         }
     };
@@ -77,7 +89,7 @@ var DrawingApp = /** @class */ (function () {
     DrawingApp.prototype.createPipes = function () {
         var _this = this;
         this.pipes = new Array();
-        setInterval(function () {
+        this.pipeTimer = setInterval(function () {
             var fixYPosition = Math.round(Math.random() * 150);
             _this.pipes.push(new Pipe(true, fixYPosition));
             _this.pipes.push(new Pipe(false, fixYPosition));
@@ -115,13 +127,22 @@ var Bird = /** @class */ (function (_super) {
     function Bird() {
         var _this = _super.call(this) || this;
         _this.imgPath = ["./img/up.png", "./img/down.png"];
+        _this.width = 40;
+        _this.height = 30;
+        _this.score = 0;
         _this.xPosition = 200;
         _this.yPosition = 100;
         _this.loadImages();
         return _this;
     }
     Bird.prototype.loadImages = function () {
-        this.img = new IMG(60, 60, this.imgPath[1]);
+        this.img = new IMG(this.width, this.height, this.imgPath[1]);
+    };
+    Bird.prototype.passPipe = function () {
+        this.score++;
+    };
+    Bird.prototype.getScore = function () {
+        return this.score;
     };
     Bird.prototype.drop = function () {
         if (this.yPosition < 350)
@@ -137,22 +158,32 @@ var Bird = /** @class */ (function (_super) {
 }(ImageObj));
 var Pipe = /** @class */ (function (_super) {
     __extends(Pipe, _super);
-    function Pipe(isUp, fixYPosition) {
+    function Pipe(isDown, fixYPosition) {
         var _this = _super.call(this) || this;
         _this.imgPath = ["./img/up_pipe.png", "./img/down_pipe.png"];
         _this.isCalculate = false;
         _this.pipeWidth = 70;
         _this.pipeHeight = 300;
+        _this.upStart = 180;
+        _this.downStart = -230;
         _this.xPosition = 800;
-        _this.yPosition = fixYPosition + (isUp ? 180 : -230); //330 - 180 (up)  -80 ~ -230
-        _this.loadImage(isUp);
+        _this.yPosition = fixYPosition + (isDown ? -230 : 180); //330 - 180 (up)  -80 ~ -230
+        _this.loadImage(isDown);
         return _this;
     }
-    Pipe.prototype.loadImage = function (isUp) {
-        this.img = isUp ? new IMG(this.pipeWidth, this.pipeHeight, this.imgPath[0]) : new IMG(this.pipeWidth, this.pipeHeight, this.imgPath[1]);
+    Pipe.prototype.loadImage = function (isDown) {
+        this.img = isDown
+            ? new IMG(this.pipeWidth, this.pipeHeight, this.imgPath[1])
+            : new IMG(this.pipeWidth, this.pipeHeight, this.imgPath[0]);
     };
     Pipe.prototype.move = function () {
         this.xPosition--;
+    };
+    Pipe.prototype.getGap = function () {
+        return this.upStart - this.pipeHeight - this.downStart;
+    };
+    Pipe.prototype.isDown = function () {
+        return this.yPosition < 0;
     };
     return Pipe;
 }(ImageObj));

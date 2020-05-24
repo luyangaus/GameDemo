@@ -4,10 +4,13 @@ class DrawingApp {
   private bird: Bird;
   private timer: number;
   private pipes: Array<Pipe>;
+  private pipeTimer: number;
+  private scoreBoard: HTMLElement;
 
   constructor() {
     this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
     this.context = this.canvas.getContext("2d");
+    this.scoreBoard = document.getElementById("mark");
     this.gameStart();
   }
 
@@ -39,17 +42,31 @@ class DrawingApp {
     this.drawBackground();
     this.drawBird();
     this.drawPipes();
+    this.scoreBoard.innerHTML = "Score: " + this.bird.getScore();
     let pipe = this.pipes.filter((pipe) => {
-      return !pipe.isCalculate;
+      return !pipe.isCalculate && pipe.isDown();
     })[0];
     this.checkStatus(pipe);
   };
 
   private checkStatus(pipe: Pipe) {
     if (pipe) {
-      if (this.bird.getXPosition() + 60 == pipe.getXPosition()) {
-        console.log("in");
+      if (
+        this.bird.getXPosition() + this.bird.width >= pipe.getXPosition() &&
+        this.bird.getXPosition() <= pipe.getXPosition() + pipe.pipeWidth &&
+        (this.bird.getYPosition() < pipe.getYPosition() + pipe.pipeHeight ||
+          this.bird.getYPosition() + this.bird.height > pipe.getYPosition() + pipe.pipeHeight + pipe.getGap())
+      ) {
+        console.log("pass");
+        clearInterval(this.timer);
+        clearInterval(this.pipeTimer);
+        console.log("pipe :" + (pipe.getYPosition() + pipe.pipeHeight));
+        console.log("bird :" + this.bird.getYPosition());
+      }
+
+      if (this.bird.getXPosition() > pipe.getXPosition() + pipe.pipeWidth) {
         pipe.isCalculate = true;
+        this.bird.passPipe();
       }
     }
   }
@@ -86,7 +103,7 @@ class DrawingApp {
 
   private createPipes() {
     this.pipes = new Array<Pipe>();
-    setInterval(() => {
+    this.pipeTimer = setInterval(() => {
       let fixYPosition = Math.round(Math.random() * 150);
       this.pipes.push(new Pipe(true, fixYPosition));
       this.pipes.push(new Pipe(false, fixYPosition));
@@ -123,17 +140,20 @@ class ImageObj implements MyImageInterface {
   public getImage() {
     return this.img;
   }
-  public getXPosition() {
+  public getXPosition(): number {
     return this.xPosition;
   }
 
-  public getYPosition() {
+  public getYPosition(): number {
     return this.yPosition;
   }
 }
 
 class Bird extends ImageObj {
   private imgPath = ["./img/up.png", "./img/down.png"];
+  public width = 40;
+  public height = 30;
+  private score = 0;
 
   constructor() {
     super();
@@ -143,7 +163,15 @@ class Bird extends ImageObj {
   }
 
   private loadImages() {
-    this.img = new IMG(60, 60, this.imgPath[1]);
+    this.img = new IMG(this.width, this.height, this.imgPath[1]);
+  }
+
+  public passPipe() {
+    this.score++;
+  }
+
+  public getScore() {
+    return this.score;
   }
 
   public drop() {
@@ -162,22 +190,34 @@ class Bird extends ImageObj {
 class Pipe extends ImageObj {
   private imgPath = ["./img/up_pipe.png", "./img/down_pipe.png"];
   public isCalculate = false;
-  private pipeWidth = 70;
-  private pipeHeight = 300;
+  public pipeWidth = 70;
+  public pipeHeight = 300;
+  private upStart = 180;
+  private downStart = -230;
 
-  constructor(isUp: boolean, fixYPosition: number) {
+  constructor(isDown: boolean, fixYPosition: number) {
     super();
     this.xPosition = 800;
-    this.yPosition = fixYPosition + (isUp ? 180 : -230); //330 - 180 (up)  -80 ~ -230
-    this.loadImage(isUp);
+    this.yPosition = fixYPosition + (isDown ? -230 : 180); //330 - 180 (up)  -80 ~ -230
+    this.loadImage(isDown);
   }
 
-  private loadImage(isUp: boolean) {
-    this.img = isUp ? new IMG(this.pipeWidth, this.pipeHeight, this.imgPath[0]) : new IMG(this.pipeWidth, this.pipeHeight, this.imgPath[1]);
+  private loadImage(isDown: boolean) {
+    this.img = isDown
+      ? new IMG(this.pipeWidth, this.pipeHeight, this.imgPath[1])
+      : new IMG(this.pipeWidth, this.pipeHeight, this.imgPath[0]);
   }
 
   public move() {
     this.xPosition--;
+  }
+
+  public getGap(): number {
+    return this.upStart - this.pipeHeight - this.downStart;
+  }
+
+  public isDown(): boolean {
+    return this.yPosition < 0;
   }
 }
 
